@@ -83,7 +83,7 @@ def initialize_intellibase():
         return None
     
     try:
-        app = IntelliBaseApp(data_directory="./sample_data")
+        app = IntelliBaseApp(data_directory="/Users/alhinai/Desktop")
         return app
     except Exception as e:
         st.error(f"Failed to initialize IntelliBase: {e}")

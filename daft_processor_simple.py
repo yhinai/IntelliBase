@@ -63,37 +63,38 @@ class IntelliBaseDataProcessor:
         print(f"   - Observability: {OBSERVABILITY_AVAILABLE}")
     
     @trace_data_processing(component="processor", operation="process_directory")
-    def process_directory(self, data_path: str = "../sample_data") -> List[Dict[str, Any]]:
-        """Process all files in a directory"""
+    def process_directory(self, data_path: str = "../sample_data", exclude_dirs=None) -> List[Dict[str, Any]]:
+        """Process all files in a directory recursively, skipping excluded folders"""
         
         print(f"🔄 Processing directory: {data_path}")
         
-        # Handle glob patterns
-        if "*" in data_path:
-            base_path = Path(data_path.replace("/*", "").replace("*", ""))
-        else:
-            base_path = Path(data_path)
+        if exclude_dirs is None:
+            exclude_dirs = ['.git', 'Library', 'node_modules', 'Applications', 'Pictures', 'Movies', 'Music', 'Public', 'Downloads', 'Desktop', 'Documents', 'OneDrive', 'Dropbox', 'Parallels', 'VirtualBox VMs', 'venv', '__pycache__']
         
+        base_path = Path(data_path)
         if not base_path.exists():
             print(f"❌ Directory not found: {base_path}")
             return []
         
         results = []
-        files = list(base_path.glob("*")) if base_path.is_dir() else [base_path]
-        
-        print(f"📁 Found {len(files)} files to process")
-        
-        for file_path in files:
-            if file_path.is_file():
-                try:
-                    file_result = self._process_single_file(file_path)
-                    if file_result:
-                        results.append(file_result)
-                        self.stats["files_processed"] += 1
-                except Exception as e:
-                    print(f"⚠️ Error processing {file_path.name}: {e}")
-                    self.stats["errors"] += 1
-        
+        file_count = 0
+        for root, dirs, files in os.walk(base_path):
+            # Exclude system/user folders
+            dirs[:] = [d for d in dirs if d not in exclude_dirs]
+            for file in files:
+                file_path = Path(root) / file
+                if file_path.is_file():
+                    try:
+                        file_result = self._process_single_file(file_path)
+                        if file_result:
+                            results.append(file_result)
+                            self.stats["files_processed"] += 1
+                            file_count += 1
+                            if file_count % 100 == 0:
+                                print(f"   Processed {file_count} files so far...")
+                    except Exception as e:
+                        print(f"⚠️ Error processing {file_path.name}: {e}")
+                        self.stats["errors"] += 1
         print(f"✅ Processed {len(results)} files successfully")
         return results
     

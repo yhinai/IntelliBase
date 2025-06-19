@@ -144,7 +144,15 @@ class FriendliAIIntegration:
             
         except Exception as e:
             print(f"❌ FriendliAI generation failed: {e}")
-            return self._mock_response(prompt, f"FriendliAI error: {e}")
+            return {
+                "content": "",
+                "model": model or self.default_model,
+                "provider": "friendliai",
+                "generation_time": 0,
+                "usage": {},
+                "success": False,
+                "error": str(e)
+            }
     
     @trace_llm_inference(provider="openai")
     def generate_response_openai(self, prompt: str, context: List[str] = None, 
@@ -267,19 +275,25 @@ Please provide a clear, comprehensive answer based on the context provided."""
     
     @trace_llm_inference(provider="auto")
     def generate_response(self, prompt: str, context: List[str] = None, **kwargs) -> Dict[str, Any]:
-        """Generate response using best available provider (FriendliAI preferred)"""
+        """Generate response using best available provider (OpenAI preferred when FriendliAI fails)"""
         
-        # Try FriendliAI first (fastest)
-        if self.friendli_client:
-            result = self.generate_response_friendli(prompt, context, **kwargs)
-            if result["success"]:
-                return result
-        
-        # Fallback to OpenAI
+        # Try OpenAI first (more reliable)
         if self.openai_client:
-            result = self.generate_response_openai(prompt, context, **kwargs)
-            if result["success"]:
-                return result
+            try:
+                result = self.generate_response_openai(prompt, context, **kwargs)
+                if result["success"]:
+                    return result
+            except Exception as e:
+                print(f"⚠️ OpenAI fallback failed: {e}")
+        
+        # Try FriendliAI as backup
+        if self.friendli_client:
+            try:
+                result = self.generate_response_friendli(prompt, context, **kwargs)
+                if result["success"]:
+                    return result
+            except Exception as e:
+                print(f"⚠️ FriendliAI failed: {e}")
         
         # Final fallback to mock
         return self._mock_response(prompt, "No LLM providers available")

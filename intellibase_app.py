@@ -67,12 +67,13 @@ except ImportError:
 class IntelliBaseApp:
     """Main IntelliBase application orchestrating all components"""
     
-    def __init__(self, data_directory: str = "./sample_data"):
+    def __init__(self, data_directory: str = "/Users/alhinai"):
         self.data_directory = data_directory
         self.data_processor = None
         self.vector_manager = None
         self.ai_integration = None
         self.hypermode_integration = None
+        self.exclude_dirs = ['.git', 'Library', 'node_modules', 'Applications', 'Pictures', 'Movies', 'Music', 'Public', 'Downloads', 'Desktop', 'OneDrive', 'Dropbox', 'Parallels', 'VirtualBox VMs', 'venv', '__pycache__']
         
         # Initialize components
         self._initialize_components()
